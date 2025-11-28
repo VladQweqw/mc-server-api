@@ -190,13 +190,51 @@ async function get_all_users(req, res) {
 }
 
 async function delete_user(req, res) {
-    const clientIp = requestIp.getClientIp(req);
+    const session_key = req.cookies?.session_key
+    const user_id = req.body?.user_id
 
-    console.log(clientIp);
+    if (!session_key || !user_id) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key / user id"
+        })
+    }
 
-    return res.status(200).json({
-        ip: clientIp
-    })
+    try {
+        admin_id = utils.verifyUserFromSession(session_key)
+        
+        if(!admin_id) {
+            return res.status(400).json({
+                status: 'error',
+                error: "Invalid session key"
+            })
+        }
+        
+        // verify if the user exists
+        const data = db.prepare(`DELETE FROM users WHERE id = ?`).run(user_id)
+        console.log(data);
+
+        if(data.changes) {
+             return res.status(200).json({
+                status: 'success',
+                error: "User deleted"
+            })
+        }else {
+             return res.status(400).json({
+                status: 'error',
+                error: "Invalid user ID"
+            })
+        }
+        
+    }
+    catch (err) {
+        console.log(`Users Req err: ${err}`);
+
+        return res.status(400).json({
+            status: 'error',
+            error: "An error occured"
+        })
+    }
 }
 
 module.exports = {
