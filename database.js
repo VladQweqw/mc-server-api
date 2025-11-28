@@ -1,4 +1,4 @@
-const Database = require('sqlite');
+const Database = require('better-sqlite3');
 const db = new Database('minecraft.db');
 
 db.pragma("foreign_keys = ON");
