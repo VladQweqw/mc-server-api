@@ -1,5 +1,3 @@
-const nodemailer = require("nodemailer")
-const requestIp = require('request-ip')
 require("dotenv").config();
 
 const bcrypt = require('bcrypt');
@@ -7,6 +5,12 @@ const crypto = require('crypto');
 
 // db connection
 const db = require("../database");
+
+function verifyUserFromSession(session_key) {
+    const user_res = db.prepare(`SELECT * FROM sessions WHERE session_key = ?`).get(session_key)
+        
+    return user_res.id || null
+}
 
 async function hashPassword(plain_password) {
     // complexity of hash
@@ -81,8 +85,46 @@ async function login(req, res) {
     }
 }
 
+async function logout(req, res) {
+    const session_key = req.cookies.session_key
 
+    if (!session_key) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key"
+        })
+    }
+
+     try {
+        user_id = verifyUserFromSession(session_key)
+
+        if(!user_id) {
+            return res.status(400).json({
+                status: 'error',
+                error: "Invalid session key"
+            })
+        }
+
+        const data = db.prepare(`DELETE FROM sessions WHERE session_key = ?`).run(session_key)
+        console.log(data);
+        
+         return res.status(200).json({
+            status: 'success',
+            users: users,
+        })
+
+    }catch(err) {
+        console.log(`Users All err: ${err}`);
+
+        return res.status(400).json({
+            status: 'error',
+            error: "An error occured"
+        })
+    }
+
+}
 
 module.exports = {
     login,
+    logout
 }

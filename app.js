@@ -10,8 +10,8 @@ const tokenMiddleware = require('./middleware/verifyToken')
 
 // custom routes
 const adminRoutes = require("./routes/adminRoutes")
-const usersRoutes = require("./routes/usersController")
-const serverRoutes = require("./routes/serverRoutes")
+const usersRoutes = require("./routes/usersRouter")
+// const serverRoutes = require("./routes/serverRoutes")
 
 // cors Settings
 const corsOptions = {

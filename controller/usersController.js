@@ -21,6 +21,7 @@ function deleteOldEntries() {
     }
 }
 
+
 async function request_access(req, res) {
     const clientIp = requestIp.getClientIp(req);
     deleteOldEntries()
@@ -65,7 +66,7 @@ async function change_state(req, res) {
     if (!session_key || !['true', 'false'].includes(state)) {
         return res.status(400).json({
             status: 'error',
-            error: "Invalid user IP / state"
+            error: "Invalid Session key / state"
         })
     }
 
@@ -148,6 +149,44 @@ async function get_user(req, res) {
     })
 }
 
+async function get_all_users(req, res) {
+    const session_key = req.cookies.session_key
+
+    if (!session_key) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key"
+        })
+    }
+
+    try {
+        user_id = verifyUserFromSession(session_key)
+
+        if(!user_id) {
+            return res.status(400).json({
+                status: 'error',
+                error: "Invalid session key or user ID"
+            })
+        }
+
+        const users = db.prepare(`SELECT * FROM users`).all()
+        console.log(users);
+        
+         return res.status(200).json({
+            status: 'success',
+            users: users,
+        })
+
+    }catch(err) {
+        console.log(`Users All err: ${err}`);
+
+        return res.status(400).json({
+            status: 'error',
+            error: "An error occured"
+        })
+    }
+}
+
 async function delete_user(req, res) {
     const clientIp = requestIp.getClientIp(req);
 
@@ -163,4 +202,5 @@ module.exports = {
     change_state,
     get_user,
     delete_user,
+    get_all_users
 }
