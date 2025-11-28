@@ -6,7 +6,9 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 // db connection
-const db = require("../database")
+const db = require("../database");
+const e = require("express");
+const { exists } = require("fs");
 
 async function hashPassword(plain_password) {
     // complexity of hash
@@ -21,26 +23,31 @@ async function validatePassword(plain_password, hashed_password) {
     return await bcrypt.compare(plain_password, hashed_password)
 }
 
-async function createSession(user_id) {
-    key = crypto.randomBytes(8).toString('hex');
-
+function deleteOldEntries() {
     try {
-        const result = db.prepare(`INSERT INTO sessions(user_id, session_key) VALUES(?, ?)`).run(user_id, key)
-        data = result.rows[0]
+        // verify if the user exists
+        const result = db.prepare(`DELETE FROM sessions WHERE created_at <= DATETIME('now', '+1 day')`).run()
+        data = result
+        console.log(data);
+        
+        console.log(`removed ${result.changes} entries older than 3 days from sessions`);
 
-        return {
-            error: true,
-            key: key
-        }
+        return true
     }
     catch (err) {
-        console.log(`Session key error: ${err}`);
-        
-        return {
-            error: true,
-            key: ""
-        }
+        console.log(`Delete entries err: ${err}`);
+        return false
     }
+}
+
+function createSession(user_id){
+ const sessionKey = crypto.randomBytes(16).toString("hex");
+    
+     // remove old
+    db.prepare(`DELETE FROM sessions WHERE user_id = ?`).run(user_id)
+    db.prepare(`INSERT INTO sessions (user_id, session_key) VALUES (?, ?)`).run(user_id, sessionKey);
+
+    return sessionKey
 }
 
 async function login(req, res) {
@@ -54,31 +61,31 @@ async function login(req, res) {
     try {
         const result = db.prepare(`SELECT * FROM admins WHERE username = ?`).all(req.body.username)
         const data = result[0]
+        
+        if(!data) {
+            return res.status(400).json({
+                error: "User not found",
+                status: "error"
+            })
+        }
 
-        console.log(data);
-        
-        
         if (await validatePassword(req.body.password, data.password)) {
-            
-            // ses = await createSession(data.id)
+            const sessionKey = createSession(data.id)
 
-            // if (ses.error) {
-            //     return res.status(500).json({
-            //         error: "Could not create session key, try again later",
-            //         ses_token: '',
-            //         status: "failed"
-            //     })
-            // }
+            res.cookie("session_key", sessionKey, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "Strict",
+            maxAge: 86400000
+            });
 
             return res.status(200).json({
                 error: "Access granted",
-                ses_token: data.id,
                 status: "success"
             })
         } else {
             return res.status(400).json({
                 error: "Invalid credentials",
-                ses_token: '',
                 status: "error"
             })
         }
@@ -88,7 +95,6 @@ async function login(req, res) {
         
         return res.status(400).json({
             error: "An error occured",
-            ses_token: '',
             status: "error"
         })
     }
