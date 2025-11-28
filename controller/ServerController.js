@@ -74,7 +74,6 @@ async function start(req, res) {
             exec('docker ps | grep mc', { cwd: BASE_PATH }, (err, stdout, stderr) => {
                 
                 const txt = stdout.split("\n")
-                console.log(txt)
                 
                 if(/\bhealthy\b/.test(txt) && /\mc\b/.test(txt)) {
                     clearInterval(interval)
@@ -118,7 +117,6 @@ async function stop(req, res) {
             exec('docker ps | grep mc', { cwd: BASE_PATH }, (err, stdout, stderr) => {
                 
                 const txt = stdout.split("\n")
-                console.log(txt)
                 
                 if(!/\bhealthy\b/.test(txt) && !/\mc\b/.test(txt)) {
                     clearInterval(interval)
