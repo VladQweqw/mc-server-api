@@ -6,11 +6,7 @@ const crypto = require('crypto');
 // db connection
 const db = require("../database");
 
-function verifyUserFromSession(session_key) {
-    const user_res = db.prepare(`SELECT * FROM sessions WHERE session_key = ?`).get(session_key)
-        
-    return user_res.id || null
-}
+const utils = require("../utils/utils")
 
 async function hashPassword(plain_password) {
     // complexity of hash
@@ -94,9 +90,9 @@ async function logout(req, res) {
             error: "Invalid Session key"
         })
     }
-
+ 
      try {
-        user_id = verifyUserFromSession(session_key)
+        user_id = utils.verifyUserFromSession(session_key)
 
         if(!user_id) {
             return res.status(400).json({
@@ -106,12 +102,13 @@ async function logout(req, res) {
         }
 
         const data = db.prepare(`DELETE FROM sessions WHERE session_key = ?`).run(session_key)
-        console.log(data);
         
-         return res.status(200).json({
-            status: 'success',
-            users: users,
-        })
+        if(data.changes) {
+            return res.status(200).json({
+                status: 'success',
+                message: 'logout successfully'
+            })
+        }
 
     }catch(err) {
         console.log(`Users All err: ${err}`);

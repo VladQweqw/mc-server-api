@@ -5,6 +5,8 @@ require("dotenv").config();
 // db connection
 const db = require("../database");
 
+const utils = require("../utils/utils")
+
 function deleteOldEntries() {
     try {
         // verify if the user exists
@@ -20,7 +22,6 @@ function deleteOldEntries() {
         return false
     }
 }
-
 
 async function request_access(req, res) {
     const clientIp = requestIp.getClientIp(req);
@@ -160,8 +161,9 @@ async function get_all_users(req, res) {
     }
 
     try {
-        user_id = verifyUserFromSession(session_key)
-
+        user_id = utils.verifyUserFromSession(session_key)
+        console.log(user_id);
+        
         if(!user_id) {
             return res.status(400).json({
                 status: 'error',
