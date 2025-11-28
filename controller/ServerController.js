@@ -1,7 +1,8 @@
+const { resolve } = require("path");
 const db = require("../database");
 const utils = require("../utils/utils")
 
-const { spawn } = require("child_process")
+const { spawn, exec } = require("child_process")
 
 const BASE_PATH = '/mnt/SSD1TB/Minecarft'
 
@@ -45,7 +46,7 @@ async function cli(req, res) {
         
         return res.status(200).json({
                 status: 'success',
-                error: response.output
+                output: response.output
             })
     }
     catch (err) {
@@ -60,24 +61,42 @@ async function cli(req, res) {
 
 async function start(req, res) {
     try {
-        const script = spawn('bash', [`${BASE_PATH}/start_server.sh`]);
+        spawn(`${BASE_PATH}/start_server.sh`, [], {
+            cwd: BASE_PATH,
+            detached: true
+        });
 
-        script.stdout.on('data', (data) => {
-            console.log(data);
+        const max_tries = 30
+        let tries = 0
+        const interval = setInterval(async () => {            
+  
             
-            return res.status(400).json({
-                message: data,
-                status: "error"
-            })
-        })
+            exec('docker ps | grep mc', { cwd: BASE_PATH }, (err, stdout, stderr) => {
+                
+                const txt = stdout.split("\n")
+                console.log(txt)
+                
+                if(/\bhealthy\b/.test(txt) && /\mc\b/.test(txt)) {
+                    clearInterval(interval)
+                     return res.status(200).json({
+                        message: "Server started",
+                        status: 'success'
+                    })
+                }
+            });
 
-        script.stderr.on('data', (data) => {
-            return res.status(400).json({
-                message: data.error,
-                status: "error"
-            })
-        })
+            if(tries > max_tries) {
+                clearInterval(interval)
+                 return res.status(400).json({
+                    message: "Server failed to start ( timeout)",
+                    status: 'error'
+                })
+            }
 
+            tries++
+        }, 5000);
+
+        
     } catch (err) {        
         return res.status(400).json({
             error: "An error occured",
@@ -87,23 +106,40 @@ async function start(req, res) {
 }
 
 async function stop(req, res) {
-    let cmd = req.query?.command
-    
-    if (!req.body || !cmd) {
-        return res.status(400).json({
-            error: "Invalid data sent",
-            status: "error"
-        })
-    }
-
     try {
-        const output = utils.cli(cmd)
-        console.log(output);
-        
-    }
-    catch (err) {
-        console.log(err);
-        
+        spawn(`${BASE_PATH}/stop_server.sh`, [], {
+            cwd: BASE_PATH,
+            detached: true
+        });
+
+        const max_tries = 5
+        let tries = 0
+        const interval = setInterval(async () => {            
+            exec('docker ps | grep mc', { cwd: BASE_PATH }, (err, stdout, stderr) => {
+                
+                const txt = stdout.split("\n")
+                console.log(txt)
+                
+                if(!/\bhealthy\b/.test(txt) && !/\mc\b/.test(txt)) {
+                    clearInterval(interval)
+                     return res.status(200).json({
+                        message: "Server stopped",
+                        status: 'success'
+                    })
+                }
+            });
+
+            if(tries > max_tries) {
+                clearInterval(interval)
+                 return res.status(400).json({
+                    message: "Failed to stop server ( timeout) / ALready closed",
+                    status: 'error'
+                })
+            }
+
+            tries++
+        }, 2000);
+    } catch (err) {        
         return res.status(400).json({
             error: "An error occured",
             status: "error"
