@@ -1,5 +1,5 @@
 const db = require("../database")
-const { exec, execSync } = require("child_process");
+const { execSync } = require("child_process");
 
 function verifyUserFromSession(session_key) {
     const user_res = db.prepare(`SELECT * FROM sessions WHERE session_key = ?`).get(session_key)
@@ -21,7 +21,7 @@ function cli(command) {
         response.output = err.message
         response.status = 'error'
     }
-
+    
     return response
 }
 
