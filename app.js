@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser');
+const cookieParser = require("cookie-parser");
 
 // token middleware
 const tokenMiddleware = require('./middleware/verifyToken')
@@ -35,7 +36,7 @@ app.use(cors(corsOptions))
 
 app.use(bodyParser.urlencoded({ extended: true })); // for form-data
 app.use(bodyParser.json()) // for JSON
-
+app.use(cookieParser());
 
 // verify token at any request
 app.use(tokenMiddleware)

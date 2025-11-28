@@ -3,7 +3,7 @@ const requestIp = require('request-ip')
 require("dotenv").config();
 
 // db connection
-const db = require("../database")
+const db = require("../database");
 
 function deleteOldEntries() {
     try {
@@ -59,31 +59,41 @@ async function request_access(req, res) {
 }
 
 async function change_state(req, res) {
-    const clientIp = requestIp.getClientIp(req);
-    const user_ip = req.body.ip_address
-    const state = req.query.state.toString()
+    let state = req.query.state
+    const session_key = req.cookies.session_key
     
-
-    if (!user_ip || !['true', 'false'].includes(state)) {
+    if (!session_key || !['true', 'false'].includes(state)) {
         return res.status(400).json({
             status: 'error',
             error: "Invalid user IP / state"
         })
     }
 
-    try {
-        // verify if the user exists
-        const data = db.prepare(`SELECT * FROM users WHERE ip_address = ?`).get(clientIp)
+    state = state === 'true' ? 1 : 0
 
+    try {
+        const user_res = db.prepare(`SELECT * FROM sessions WHERE session_key = ?`).get(session_key)
+        
+        if(!user_res) {
+             return res.status(500).json({
+                status: 'error',
+                error: `Failed to get user from session key`
+            })
+        }
+        
+        const user_id = user_res.user_id
+        
+        // verify if the user exists
+        const data = db.prepare(`SELECT * FROM users WHERE id = ?`).get(user_id)
 
         if (!data) {
             return res.status(400).json({
                 status: 'error',
-                error: "User with this IP doesn't exist"
+                error: "Invalid user ID"
             })
         } else {
-            const data = db.prepare(`UPDATE users SET isValid = ? WHERE ip_address = ?`).run(state, user_ip)
-
+            const data = db.prepare(`UPDATE users SET isValid = ? WHERE id = ?`).run(state, user_id)
+            
             if (data.changes == 1) {
                 return res.status(200).json({
                     status: 'success',

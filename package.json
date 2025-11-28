@@ -4,6 +4,7 @@
     "better-sqlite3": "^12.4.6",
     "body-parser": "^2.2.0",
     "child_process": "^1.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.7",

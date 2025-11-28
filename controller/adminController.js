@@ -7,8 +7,6 @@ const crypto = require('crypto');
 
 // db connection
 const db = require("../database");
-const e = require("express");
-const { exists } = require("fs");
 
 async function hashPassword(plain_password) {
     // complexity of hash
@@ -21,23 +19,6 @@ async function hashPassword(plain_password) {
 async function validatePassword(plain_password, hashed_password) {
     // hash the entered password
     return await bcrypt.compare(plain_password, hashed_password)
-}
-
-function deleteOldEntries() {
-    try {
-        // verify if the user exists
-        const result = db.prepare(`DELETE FROM sessions WHERE created_at <= DATETIME('now', '+1 day')`).run()
-        data = result
-        console.log(data);
-        
-        console.log(`removed ${result.changes} entries older than 3 days from sessions`);
-
-        return true
-    }
-    catch (err) {
-        console.log(`Delete entries err: ${err}`);
-        return false
-    }
 }
 
 function createSession(user_id){
@@ -99,6 +80,8 @@ async function login(req, res) {
         })
     }
 }
+
+
 
 module.exports = {
     login,
