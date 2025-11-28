@@ -15,7 +15,7 @@ function cli(command) {
 
     try {
         const output = execSync(command)    
-        response.output = output
+        response.output = output.toString()
          
     } catch(err) {
         response.output = err.message
