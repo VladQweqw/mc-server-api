@@ -120,10 +120,10 @@ async function change_state(req, res) {
 }
 
 async function get_user(req, res) {
-    user_id = req.body.ip_address
+    const user_ip = requestIp.getClientIp(req);
     
     try {
-        const data = db.prepare(`SELECT ip_address, isValid, expired_date FROM users WHERE ip_address = ?`).get(user_id)
+        const data = db.prepare(`SELECT ip_address, isValid, expired_date FROM users WHERE ip_address = ?`).get(user_ip)
         
         if (!data) {
             return res.status(400).json({
@@ -143,11 +143,6 @@ async function get_user(req, res) {
             error: "User with this IP doesn't exist"
         })
     }
-
-    return res.status(500).json({
-        status: 'error',
-        error: "An error occured"
-    })
 }
 
 async function get_all_users(req, res) {
