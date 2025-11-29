@@ -16,6 +16,12 @@ async function hashPassword(plain_password) {
     return await bcrypt.hash(plain_password, saltRounds)
 }
 
+async function test() {
+    console.log(a);
+}
+
+test()
+
 async function validatePassword(plain_password, hashed_password) {
     // hash the entered password
     return await bcrypt.compare(plain_password, hashed_password)
