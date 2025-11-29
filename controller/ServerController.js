@@ -34,6 +34,13 @@ async function cli(req, res) {
             })
         }
 
+        if(!utils.isUSerAdmin(admin_id)) {
+            return res.status(400).json({
+                status: 'error',
+                error: "User not admin"
+            })
+        }
+
         const response = utils.cli(cmd)
         
         if(response.status === 'error') {
@@ -60,7 +67,25 @@ async function cli(req, res) {
 }
 
 async function start(req, res) {
+    const session_key = req.cookies.session_key
+
+    if (!session_key) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key"
+        })
+    }
+
     try {
+        user_id = utils.verifyUserFromSession(session_key)
+
+        if(!user_id || !utils.isUserVAlid(user_id)) {
+            return res.status(400).json({
+                status: 'error',
+                error: "User not valid"
+            })
+        }
+
         spawn(`${BASE_PATH}/start_server.sh`, [], {
             cwd: BASE_PATH,
             detached: true
@@ -96,7 +121,9 @@ async function start(req, res) {
         }, 5000);
 
         
-    } catch (err) {        
+    } catch (err) {    
+        console.log(`Start server err: ${err}`);
+            
         return res.status(400).json({
             error: "An error occured",
             status: "error"
@@ -105,7 +132,25 @@ async function start(req, res) {
 }
 
 async function stop(req, res) {
+    const session_key = req.cookies.session_key
+
+    if (!session_key) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key"
+        })
+    }
+
     try {
+        user_id = utils.verifyUserFromSession(session_key)
+
+        if(!user_id || !utils.isUserVAlid(user_id)) {
+            return res.status(400).json({
+                status: 'error',
+                error: "User not valid"
+            })
+        }
+
         spawn(`${BASE_PATH}/stop_server.sh`, [], {
             cwd: BASE_PATH,
             detached: true

@@ -9,7 +9,6 @@ const cookieParser = require("cookie-parser");
 const tokenMiddleware = require('./middleware/verifyToken')
 
 // custom routes
-const adminRoutes = require("./routes/adminRoutes")
 const usersRoutes = require("./routes/usersRouter")
 const serverRoutes = require("./routes/serverRoutes")
 
@@ -49,6 +48,5 @@ app.get("/", (req, res) => {
 })
 
 // define custom routes here
-app.use('/admin', adminRoutes)
 app.use('/users', usersRoutes)
 app.use('/server', serverRoutes)

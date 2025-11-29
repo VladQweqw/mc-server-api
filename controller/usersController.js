@@ -4,7 +4,8 @@ require("dotenv").config();
 
 // db connection
 const db = require("../database");
-
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const utils = require("../utils/utils")
 
 function deleteOldEntries() {
@@ -23,9 +24,133 @@ function deleteOldEntries() {
     }
 }
 
+async function hashPassword(plain_password) {
+    // complexity of hash
+    const saltRounds = 10
+
+    // encrypt the password using the sald
+    return await bcrypt.hash(plain_password, saltRounds)
+}
+
+async function validatePassword(plain_password, hashed_password) {
+    // hash the entered password
+    return await bcrypt.compare(plain_password, hashed_password)
+}
+
+
+async function createAccount(){
+    const usernmae = 'civil'
+    
+
+    const hash_pwd = await hashPassword(password)
+    
+    const res = db.prepare(`INSERT INTO users (username, password, isAdmin, isValid) VALUES (?, ?, 0, 1)`).run(usernmae, hash_pwd);
+    
+}
+
+
+function createSession(user_id){
+ const sessionKey = crypto.randomBytes(16).toString("hex");
+    
+     // remove oldclear
+    db.prepare(`DELETE FROM sessions WHERE user_id = ?`).run(user_id)
+    db.prepare(`INSERT INTO sessions (user_id, session_key) VALUES (?, ?)`).run(user_id, sessionKey);
+
+    return sessionKey
+}
+
+async function login(req, res) {
+    if (!req.body) {
+        return res.status(400).json({
+            error: "Invalid data sent",
+            status: "error"
+        })
+    }
+
+    try {
+        const result = db.prepare(`SELECT * FROM users WHERE username = ?`).all(req.body.username)
+        const data = result[0]
+        
+        if(!data) {
+            return res.status(400).json({
+                error: "User not found",
+                status: "error"
+            })
+        }
+
+        if (await validatePassword(req.body.password, data.password)) {
+            const sessionKey = createSession(data.id)
+
+            res.cookie("session_key", sessionKey, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "Strict",
+            maxAge: 86400000
+            });
+
+            return res.status(200).json({
+                error: "Access granted",
+                status: "success"
+            })
+        } else {
+            return res.status(400).json({
+                error: "Invalid credentials",
+                status: "error"
+            })
+        }
+    }
+    catch (err) {
+        console.log(err);
+        
+        return res.status(400).json({
+            error: "An error occured",
+            status: "error"
+        })
+    }
+}
+
+async function logout(req, res) {
+    const session_key = req.cookies.session_key
+
+    if (!session_key) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key"
+        })
+    }
+ 
+     try {
+        user_id = utils.verifyUserFromSession(session_key)
+
+        if(!user_id) {
+            return res.status(400).json({
+                status: 'error',
+                error: "Invalid session key"
+            })
+        }
+
+        const data = db.prepare(`DELETE FROM sessions WHERE session_key = ?`).run(session_key)
+        
+        if(data.changes) {
+            return res.status(200).json({
+                status: 'success',
+                message: 'logout successfully'
+            })
+        }
+
+    }catch(err) {
+        console.log(`Users All err: ${err}`);
+
+        return res.status(400).json({
+            status: 'error',
+            error: "An error occured"
+        })
+    }
+
+}
+
 async function request_access(req, res) {
     const clientIp = requestIp.getClientIp(req);
-    deleteOldEntries()
 
     try {
         // verify if the user exists
@@ -62,9 +187,10 @@ async function request_access(req, res) {
 
 async function change_state(req, res) {
     let state = req.query.state
+    let ip_address = req.query.ip_address
     const session_key = req.cookies.session_key
     
-    if (!session_key || !['true', 'false'].includes(state)) {
+    if (!session_key || !['true', 'false'].includes(state) || !ip_address) {
         return res.status(400).json({
             status: 'error',
             error: "Invalid Session key / state"
@@ -74,19 +200,26 @@ async function change_state(req, res) {
     state = state === 'true' ? 1 : 0
 
     try {
-        const user_res = db.prepare(`SELECT * FROM sessions WHERE session_key = ?`).get(session_key)
+        const admin = db.prepare(`SELECT * FROM sessions WHERE session_key = ?`).get(session_key)
         
-        if(!user_res) {
+        if(!admin) {
              return res.status(500).json({
                 status: 'error',
                 error: `Failed to get user from session key`
             })
         }
         
-        const user_id = user_res.user_id
+        const admin_id = admin.user_id
         
+        if(!utils.isUSerAdmin(admin_id)) {
+            return res.status(400).json({
+                status: 'error',
+                error: `User not admin`
+            })
+        }
+
         // verify if the user exists
-        const data = db.prepare(`SELECT * FROM users WHERE id = ?`).get(user_id)
+        const data = db.prepare(`SELECT * FROM users WHERE ip_address = ?`).get(ip_address)
 
         if (!data) {
             return res.status(400).json({
@@ -123,7 +256,7 @@ async function get_user(req, res) {
     const user_ip = requestIp.getClientIp(req);
     
     try {
-        const data = db.prepare(`SELECT ip_address, isValid, expired_date FROM users WHERE ip_address = ?`).get(user_ip)
+        const data = db.prepare(`SELECT ip_address, isAdmin, isValid, username, created_at FROM users WHERE ip_address = ?`).get(user_ip)
         
         if (!data) {
             return res.status(400).json({
@@ -156,18 +289,16 @@ async function get_all_users(req, res) {
     }
 
     try {
-        user_id = utils.verifyUserFromSession(session_key)
-        console.log(user_id);
+        admin_id = utils.verifyUserFromSession(session_key)
         
-        if(!user_id) {
+        if(!admin_id || !utils.isUSerAdmin(admin_id)) {
             return res.status(400).json({
                 status: 'error',
                 error: "Invalid session key or user ID"
             })
         }
-
-        const users = db.prepare(`SELECT * FROM users`).all()
-        console.log(users);
+        
+        const users = db.prepare(`SELECT ip_address, username, created_at, isAdmin, isValid FROM users`).all()
         
          return res.status(200).json({
             status: 'success',
@@ -198,10 +329,10 @@ async function delete_user(req, res) {
     try {
         admin_id = utils.verifyUserFromSession(session_key)
         
-        if(!admin_id) {
+        if(!user_id || !utils.isUSerAdmin(admin_id)) {
             return res.status(400).json({
                 status: 'error',
-                error: "Invalid session key"
+                error: "Invalid session key or invalid user permissions"
             })
         }
         
@@ -237,5 +368,7 @@ module.exports = {
     change_state,
     get_user,
     delete_user,
-    get_all_users
+    get_all_users,
+    login,
+    logout,
 }
