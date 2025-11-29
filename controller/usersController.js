@@ -84,7 +84,7 @@ async function login(req, res) {
             res.cookie("session_key", sessionKey, {
             httpOnly: true,
             secure: true,
-            sameSite: "Strict",
+            sameSite: "None",
             maxAge: 86400000
             });
 
