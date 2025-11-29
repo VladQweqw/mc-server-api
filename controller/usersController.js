@@ -252,16 +252,32 @@ async function change_state(req, res) {
     }
 }
 
-async function get_user(req, res) {
-    const user_ip = requestIp.getClientIp(req);
+async function get_user(req, res) { 
+    const session_key = req.cookies.session_key
+
+    if (!session_key) {
+        return res.status(400).json({
+            status: 'error',
+            error: "Invalid Session key"
+        })
+    }  
+    
     
     try {
-        const data = db.prepare(`SELECT ip_address, isAdmin, isValid, username, created_at FROM users WHERE ip_address = ?`).get(user_ip)
+        user_id = utils.verifyUserFromSession(session_key)
+        
+        if(!user_id) {
+            return res.status(400).json({
+                status: 'error',
+                error: "Invalid session key or user ID"
+            })
+        }
+        const data = db.prepare(`SELECT ip_address, isAdmin, isValid, username, created_at FROM users WHERE id = ?`).get(user_id)
         
         if (!data) {
             return res.status(400).json({
                 status: 'error',
-                error: "User with this IP doesn't exist"
+                error: "User not found"
             })
         }else {
             return res.status(200).json({
@@ -271,6 +287,8 @@ async function get_user(req, res) {
         }
     }
     catch (err) {
+        console.log(`GET USER ERR ${err}`);
+        
         return res.status(400).json({
             status: 'error',
             error: "User with this IP doesn't exist"
