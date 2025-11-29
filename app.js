@@ -14,7 +14,7 @@ const serverRoutes = require("./routes/serverRoutes")
 
 // cors Settings
 const corsOptions = {
-    origin: '*',  
+    origin: 'https://minecraft.vladpoienariu.com',  
     methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE', 
     allowedHeaders: 'Authorization, Content-Type',
     optionsSuccessStatus: 200, 
