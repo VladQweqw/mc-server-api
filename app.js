@@ -18,6 +18,7 @@ const corsOptions = {
     methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE', 
     allowedHeaders: 'Authorization, Content-Type',
     optionsSuccessStatus: 200, 
+    credentials: true
 };
 
 // create express app
