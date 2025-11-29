@@ -16,11 +16,11 @@ async function hashPassword(plain_password) {
     return await bcrypt.hash(plain_password, saltRounds)
 }
 
-async function test() {
-    console.log(a);
-}
+// async function test() {
+//     console.log(a);
+// }
 
-test()
+// test()
 
 async function validatePassword(plain_password, hashed_password) {
     // hash the entered password
@@ -30,7 +30,7 @@ async function validatePassword(plain_password, hashed_password) {
 function createSession(user_id){
  const sessionKey = crypto.randomBytes(16).toString("hex");
     
-     // remove old
+     // remove oldclear
     db.prepare(`DELETE FROM sessions WHERE user_id = ?`).run(user_id)
     db.prepare(`INSERT INTO sessions (user_id, session_key) VALUES (?, ?)`).run(user_id, sessionKey);
 

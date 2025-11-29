@@ -24,7 +24,7 @@ db.prepare(`
     VALUES(?, ?)
 `).run(
     "vlad", 
-    "$2b$10$cIpsHcFA/0vOlihsbYfz0.Sh6smvyPKh0Huzwahf3vtlG6E0UC3By"
+    "$2b$10$Xe1oen7mh9WDpGkDwnJMsudGqSi7UjnvtZtfOHIjblujkL8.f51pO"
 );
 
 // sessions
